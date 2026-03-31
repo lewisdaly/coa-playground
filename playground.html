@@ -1,0 +1,1032 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="icon" type="image/x-icon" href="./favicon-2xs7dq2k.ico">
+  <title>COA Playground</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    /* Dark mode (default) */
+    :root {
+      --bg-primary: #0d0d0d;
+      --bg-secondary: #111;
+      --bg-tertiary: #080808;
+      --bg-card: #111;
+      --border-primary: #1e1e1e;
+      --border-secondary: #222;
+      --border-tertiary: #1a1a1a;
+      --text-primary: #d4d4d4;
+      --text-secondary: #b0b0b0;
+      --text-muted: #888;
+      --text-dim: #666;
+      --text-dimmer: #555;
+      --text-dimmest: #3a3a3a;
+      --text-hint: #2a2a2a;
+      --accent: #ffef5c;
+      --accent-hover: #fff;
+      --accent-bg: #ffef5c18;
+      --accent-bg-strong: #ffef5c55;
+      --btn-secondary-bg: #333;
+      --btn-secondary-text: #aaa;
+      --btn-secondary-hover-bg: #444;
+      --btn-secondary-hover-text: #ddd;
+      --success: #6db86d;
+      --error: #e05c5c;
+      --warn: #d4a027;
+      --info: #666;
+      --divider-bg: #1a1a1a;
+      --input-bg: #111;
+      --input-border: #2a2a2a;
+      --input-text: #aaa;
+      --monaco-theme: coa-dark;
+    }
+
+    /* Light mode */
+    @media (prefers-color-scheme: light) {
+      :root {
+        --bg-primary: #f0f0f0;
+        --bg-secondary: #f5f5f5;
+        --bg-tertiary: #e8e8e8;
+        --bg-card: #ffffff;
+        --border-primary: #b0b0b0;
+        --border-secondary: #999;
+        --border-tertiary: #c0c0c0;
+        --text-primary: #111;
+        --text-secondary: #222;
+        --text-muted: #444;
+        --text-dim: #555;
+        --text-dimmer: #666;
+        --text-dimmest: #888;
+        --text-hint: #aaa;
+        --accent: #b08000;
+        --accent-hover: #906500;
+        --accent-bg: #fef3c740;
+        --accent-bg-strong: #fef3c7aa;
+        --btn-secondary-bg: #ddd;
+        --btn-secondary-text: #444;
+        --btn-secondary-hover-bg: #ccc;
+        --btn-secondary-hover-text: #222;
+        --success: #1e6e1e;
+        --error: #b02020;
+        --warn: #906000;
+        --info: #555;
+        --divider-bg: #bbb;
+        --input-bg: #fff;
+        --input-border: #999;
+        --input-text: #444;
+        --monaco-theme: coa-light;
+      }
+    }
+
+    html, body {
+      height: 100%;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      font-size: 14px;
+      overflow: hidden;
+    }
+
+    #app {
+      display: flex;
+      height: 100vh;
+    }
+
+    /* ── Left pane ── */
+    #editor-pane {
+      display: flex;
+      flex-direction: column;
+      flex: 1;
+      min-width: 200px;
+      overflow: hidden;
+    }
+
+    #divider {
+      width: 4px;
+      background: var(--divider-bg);
+      cursor: col-resize;
+      flex-shrink: 0;
+      transition: background 0.1s;
+      user-select: none;
+    }
+    #divider:hover, #divider.dragging { background: var(--accent-bg-strong); }
+
+    .pane-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 0 16px;
+      height: 44px;
+      border-bottom: 1px solid var(--border-primary);
+      flex-shrink: 0;
+    }
+
+    .pane-title {
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--text-dimmer);
+    }
+
+    #run-btn {
+      padding: 4px 14px;
+      background: var(--accent);
+      color: #000;
+      border: none;
+      border-radius: 4px;
+      font-weight: 600;
+      font-size: 12px;
+      letter-spacing: 0.5px;
+      cursor: pointer;
+      transition: background 0.1s;
+    }
+    #run-btn:hover:not(:disabled) { background: var(--accent-hover); }
+    #run-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    #clear-btn {
+      padding: 4px 14px;
+      background: var(--btn-secondary-bg);
+      color: var(--btn-secondary-text);
+      border: none;
+      border-radius: 4px;
+      font-weight: 600;
+      font-size: 12px;
+      letter-spacing: 0.5px;
+      cursor: pointer;
+      transition: background 0.1s;
+    }
+    #clear-btn:hover { background: var(--btn-secondary-hover-bg); color: var(--btn-secondary-hover-text); }
+
+    #folder-btn, #save-btn, #new-file-btn {
+      padding: 4px 10px;
+      background: var(--btn-secondary-bg);
+      color: var(--btn-secondary-text);
+      border: none;
+      border-radius: 4px;
+      font-weight: 600;
+      font-size: 12px;
+      cursor: pointer;
+      transition: background 0.1s;
+    }
+    #folder-btn:hover, #save-btn:hover, #new-file-btn:hover {
+      background: var(--btn-secondary-hover-bg);
+      color: var(--btn-secondary-hover-text);
+    }
+
+    #file-select {
+      padding: 4px 8px;
+      background: var(--bg-secondary);
+      color: var(--text-primary);
+      border: 1px solid var(--border-color);
+      border-radius: 4px;
+      font-size: 12px;
+      font-family: inherit;
+      cursor: pointer;
+      max-width: 200px;
+    }
+    #file-select:focus { outline: none; border-color: var(--accent); }
+
+    .status {
+      font-size: 12px;
+      min-width: 60px;
+    }
+    .status-ok      { color: var(--success); }
+    .status-error   { color: var(--error); }
+    .status-running { color: var(--warn); }
+
+    .hint {
+      margin-left: auto;
+      font-size: 11px;
+      color: var(--text-dimmest);
+    }
+
+    .url-bar {
+      display: flex;
+      gap: 6px;
+      padding: 6px 16px;
+      border-bottom: 1px solid var(--border-primary);
+      flex-shrink: 0;
+      background: var(--bg-tertiary);
+    }
+
+    #sheet-url {
+      flex: 1;
+      background: var(--input-bg);
+      border: 1px solid var(--input-border);
+      border-radius: 4px;
+      color: var(--input-text);
+      font-size: 12px;
+      padding: 4px 10px;
+      outline: none;
+      font-family: inherit;
+    }
+    #sheet-url:focus { border-color: var(--text-dimmer); color: var(--text-secondary); }
+    #sheet-url::placeholder { color: var(--text-dimmest); }
+
+    #load-btn {
+      padding: 4px 12px;
+      background: var(--border-primary);
+      color: var(--text-muted);
+      border: 1px solid var(--input-border);
+      border-radius: 4px;
+      font-size: 12px;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    #load-btn:hover:not(:disabled) { background: var(--input-border); color: var(--text-secondary); }
+    #load-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    #editor-container {
+      flex: 1;
+      min-height: 0;
+      overflow: hidden;
+    }
+
+    #log-divider {
+      height: 4px;
+      background: var(--divider-bg);
+      cursor: row-resize;
+      flex-shrink: 0;
+      transition: background 0.1s;
+      user-select: none;
+    }
+    #log-divider:hover, #log-divider.dragging { background: var(--accent-bg-strong); }
+
+    #log-pane {
+      height: 250px;
+      display: flex;
+      flex-direction: column;
+      flex-shrink: 0;
+      background: var(--bg-tertiary);
+    }
+
+    #log-pane.maximized {
+      flex: 1;
+      height: auto !important;
+      min-height: 0;
+      overflow: hidden;
+    }
+
+    #log-pane.maximized + #editor-container,
+    #log-pane.maximized ~ #editor-container {
+      display: none;
+    }
+
+    #log-pane .pane-header {
+      background: var(--bg-tertiary);
+    }
+
+    #log {
+      padding: 8px 16px;
+      overflow-y: auto;
+      flex: 1;
+      min-height: 0;
+    }
+
+    .log-line {
+      font-family: "JetBrains Mono", "SF Mono", Consolas, monospace;
+      font-size: 12px;
+      line-height: 1.7;
+      white-space: pre-wrap;
+      word-break: break-all;
+    }
+    .log-line[data-tid] {
+      cursor: pointer;
+      border-radius: 3px;
+      transition: background 0.1s;
+    }
+    .log-line[data-tid]:hover,
+    .log-line-highlight { background: var(--accent-bg) !important; }
+    .log-success { color: var(--success); }
+    .log-error   { color: var(--error); }
+    .log-warn    { color: var(--warn); }
+    .log-info    { color: var(--info); }
+
+    /* ── Right pane ── */
+    #t-accounts-pane {
+      display: flex;
+      flex-direction: column;
+      flex: 1;
+      min-width: 200px;
+      overflow: hidden;
+    }
+
+    #t-accounts-tabs {
+      display: flex;
+      gap: 2px;
+      padding: 8px 16px 0;
+      overflow-x: auto;
+      flex-shrink: 0;
+    }
+
+    .t-accounts-tab {
+      padding: 6px 12px;
+      font-size: 11px;
+      font-family: "JetBrains Mono", "SF Mono", Consolas, monospace;
+      color: var(--text-dim);
+      background: transparent;
+      border: none;
+      border-bottom: 2px solid transparent;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+
+    .t-accounts-tab:hover {
+      color: var(--text-muted);
+    }
+
+    .t-accounts-tab.active {
+      color: var(--text-secondary);
+      border-bottom-color: var(--accent);
+    }
+
+    #t-accounts-content {
+      flex: 1;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .t-accounts-panel {
+      position: absolute;
+      inset: 0;
+      padding: 16px;
+      display: none;
+      flex-direction: column;
+      gap: 24px;
+      overflow-y: auto;
+    }
+
+    .t-accounts-panel.active {
+      display: flex;
+    }
+
+    .t-accounts-section {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .t-accounts-section-header {
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid var(--border-secondary);
+      color: var(--text-dimmer);
+    }
+
+    .t-accounts-section-cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, 240px);
+      gap: 16px;
+    }
+
+    /* ── Ledger grouping within type sections ── */
+    .t-accounts-ledger-row {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+
+    .t-accounts-ledger-label {
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      padding: 4px 10px;
+      border-radius: 3px;
+      color: var(--text-muted);
+      background: var(--bg-tertiary);
+      width: fit-content;
+    }
+
+    .t-accounts-ledger-label.ledger-color-0 { border-left: 3px solid #60a5fa; }
+    .t-accounts-ledger-label.ledger-color-1 { border-left: 3px solid #34d399; }
+    .t-accounts-ledger-label.ledger-color-2 { border-left: 3px solid #fbbf24; }
+    .t-accounts-ledger-label.ledger-color-3 { border-left: 3px solid #f87171; }
+    .t-accounts-ledger-label.ledger-color-4 { border-left: 3px solid #a78bfa; }
+    .t-accounts-ledger-label.ledger-color-5 { border-left: 3px solid #fb923c; }
+
+    .t-accounts-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 16px;
+    }
+
+    /* ── T-Account cards ── */
+    .t-account {
+      border: 1px solid var(--border-secondary);
+      border-radius: 6px;
+      width: 240px;
+      background: var(--bg-card);
+      overflow: hidden;
+      font-family: 'JetBrains Mono', 'Fira Code', 'SF Mono', Consolas, monospace;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .t-account-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      padding: 9px 13px;
+      border-bottom: 2px solid var(--border-secondary);
+    }
+
+    .t-account-header-left {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .t-account-type {
+      font-size: 10px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--text-dimmer);
+      margin-bottom: 2px;
+    }
+
+    .t-account-name {
+      font-weight: 600;
+      font-size: 14px;
+      color: var(--text-secondary);
+    }
+
+    .t-account-ledger {
+      font-size: 10px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    /* Ledger color coding - subtle, muted colors */
+    .ledger-color-0 { color: #6a8080; }
+    .ledger-color-1 { color: #8a7a5a; }
+    .ledger-color-2 { color: #5a8a6a; }
+    .ledger-color-3 { color: #8a5a7a; }
+    .ledger-color-4 { color: #6a5a8a; }
+    .ledger-color-5 { color: #8a8a5a; }
+
+    @media (prefers-color-scheme: light) {
+      .ledger-color-0 { color: #4a6060; }
+      .ledger-color-1 { color: #6a5a3a; }
+      .ledger-color-2 { color: #3a6a4a; }
+      .ledger-color-3 { color: #6a3a5a; }
+      .ledger-color-4 { color: #4a3a6a; }
+      .ledger-color-5 { color: #6a6a3a; }
+    }
+
+    .t-account-meta {
+      font-size: 11px;
+      color: var(--text-dimmer);
+    }
+
+    .t-account-body {
+      display: flex;
+      min-height: 56px;
+      flex: 1;
+    }
+
+    .t-side {
+      flex: 1;
+      padding: 10px 12px;
+      min-width: 0;
+    }
+
+    .t-side-header {
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--text-dimmest);
+      margin-bottom: 6px;
+      text-align: center;
+    }
+
+    .t-divider {
+      width: 1px;
+      background: var(--border-secondary);
+      flex-shrink: 0;
+    }
+
+    .t-entries { min-height: 16px; }
+
+    .t-entry {
+      display: flex;
+      justify-content: flex-end;
+      align-items: center;
+      padding: 2px 4px;
+      border-radius: 3px;
+      font-size: 14px;
+      cursor: default;
+      transition: background 0.1s;
+    }
+
+    .t-entry-highlight { background: var(--accent-bg) !important; }
+
+    .entry-amount {
+      font-variant-numeric: tabular-nums;
+      font-weight: 600;
+      white-space: nowrap;
+      text-align: right;
+      color: var(--text-secondary);
+    }
+
+    .entry-pending {
+      font-variant-numeric: tabular-nums;
+      font-size: 12px;
+      color: var(--text-dim);
+      width: 24px;
+      text-align: left;
+    }
+
+    .t-entry.voided .entry-amount {
+      text-decoration: line-through;
+      color: var(--text-dimmer);
+    }
+
+    .t-entry.voided .entry-pending {
+      text-decoration: line-through;
+      color: var(--text-dimmest);
+    }
+
+    .t-totals-row {
+      display: flex;
+      border-top: 1px solid var(--border-primary);
+      margin-top: auto;
+    }
+
+    .t-total {
+      flex: 1;
+      padding: 5px 12px;
+    }
+
+    .t-total-inner {
+      display: flex;
+      justify-content: flex-end;
+      align-items: center;
+      padding: 2px 4px;
+      font-size: 14px;
+      font-weight: 700;
+      font-variant-numeric: tabular-nums;
+      color: var(--text-muted);
+    }
+
+    .t-total-amount {
+      text-align: right;
+    }
+
+    .t-total-spacer {
+      width: 24px;
+      text-align: left;
+    }
+
+    .t-total-divider {
+      width: 1px;
+      background: var(--border-secondary);
+      flex-shrink: 0;
+    }
+
+    .t-balance {
+      padding: 6px 13px;
+      border-top: 1px solid var(--border-tertiary);
+      font-size: 11px;
+      color: var(--text-dimmer);
+      text-align: center;
+      background: var(--bg-primary);
+      font-variant-numeric: tabular-nums;
+    }
+
+    /* ── Editor transfer highlight ── */
+    .tb-transfer-line-highlight { background: var(--accent-bg) !important; }
+
+    /* ── Empty state ── */
+    #t-accounts-content:empty::before {
+      content: "Run the code to see T-Accounts";
+      color: var(--text-hint);
+      font-size: 13px;
+      margin: auto;
+      display: block;
+      text-align: center;
+      padding-top: 48px;
+      width: 100%;
+    }
+  </style>
+<script type="module" crossorigin src="./playground-9t4447mb.js"></script></head>
+<body>
+  <div id="app">
+
+    <div id="editor-pane">
+      <div class="pane-header">
+        <span class="pane-title">Code</span>
+        <button id="folder-btn" title="Open folder">Folder</button>
+        <select id="file-select" style="display: none;"></select>
+        <button id="save-btn" title="Save (⌘S)" style="display: none;">Save</button>
+        <button id="new-file-btn" title="New file" style="display: none;">+ New</button>
+        <button id="run-btn">▶ Run</button>
+        <button id="clear-btn">Clear</button>
+        <span id="status" class="status"></span>
+        <span class="hint">⌘↵ run · ⌘O folder · ⌘S save</span>
+      </div>
+      <!-- Hidden for now - Google Sheets import feature
+      <div class="url-bar">
+        <input id="sheet-url" type="url" placeholder="Paste Google Sheets URL to load…" spellcheck="false">
+        <button id="load-btn">Load Sheet</button>
+      </div>
+      -->
+      <div id="editor-container"></div>
+      <div id="log-divider"></div>
+      <div id="log-pane">
+        <div class="pane-header">
+          <span class="pane-title">Console</span>
+          <span class="hint">⌘J hide · ⌘⇧J maximize</span>
+        </div>
+        <div id="log"></div>
+      </div>
+    </div>
+
+    <div id="divider"></div>
+    <div id="t-accounts-pane">
+      <div class="pane-header">
+        <span class="pane-title">T-Accounts</span>
+      </div>
+      <div id="t-accounts-tabs"></div>
+      <div id="t-accounts-content"></div>
+    </div>
+
+  </div>
+
+  <!-- Monaco Editor (AMD loader from CDN) -->
+  <script src="https://cdn.jsdelivr.net/npm/monaco-editor@0.52.2/min/vs/loader.js"></script>
+  <script>
+    require.config({ paths: { vs: 'https://cdn.jsdelivr.net/npm/monaco-editor@0.52.2/min/vs' } });
+
+    window.__monacoReady = new Promise((resolve) => {
+      require(['vs/editor/editor.main'], () => {
+
+        // Custom dark theme
+        monaco.editor.defineTheme('coa-dark', {
+          base: 'vs-dark',
+          inherit: true,
+          rules: [],
+          colors: {
+            'editor.background':                '#0d0d0d',
+            'editor.lineHighlightBackground':   '#141414',
+            'editorLineNumber.foreground':      '#2e2e2e',
+            'editorLineNumber.activeForeground':'#555555',
+            'editorCursor.foreground':          '#ffef5c',
+            'editor.selectionBackground':       '#ffef5c33',
+            'editor.inactiveSelectionBackground':'#ffef5c1a',
+            'scrollbarSlider.background':       '#2a2a2a88',
+            'scrollbarSlider.hoverBackground':  '#3a3a3aaa',
+            'editorWidget.background':          '#141414',
+            'editorSuggestWidget.background':   '#141414',
+            'editorSuggestWidget.border':       '#2a2a2a',
+          },
+        });
+
+        // Custom light theme
+        monaco.editor.defineTheme('coa-light', {
+          base: 'vs',
+          inherit: true,
+          rules: [],
+          colors: {
+            'editor.background':                '#ffffff',
+            'editor.lineHighlightBackground':   '#f5f5f5',
+            'editorLineNumber.foreground':      '#c0c0c0',
+            'editorLineNumber.activeForeground':'#888888',
+            'editorCursor.foreground':          '#d4a000',
+            'editor.selectionBackground':       '#fef3c744',
+            'editor.inactiveSelectionBackground':'#fef3c722',
+            'scrollbarSlider.background':       '#c0c0c088',
+            'scrollbarSlider.hoverBackground':  '#a0a0a0aa',
+            'editorWidget.background':          '#f8f8f8',
+            'editorSuggestWidget.background':   '#f8f8f8',
+            'editorSuggestWidget.border':       '#d0d0d0',
+          },
+        });
+
+        // Detect color scheme preference
+        const prefersDark = window.matchMedia('(prefers-color-scheme: dark)');
+        const getTheme = () => prefersDark.matches ? 'coa-dark' : 'coa-light';
+
+        // Type declarations for the playground API — enables IntelliSense
+        monaco.languages.typescript.javascriptDefaults.addExtraLib(`
+          // ═══════════════════════════════════════════════════════════════════════════
+          // TigerBeetle Core Types (from tigerbeetle-node)
+          // ═══════════════════════════════════════════════════════════════════════════
+
+          /** TigerBeetle Account */
+          interface Account {
+            id: bigint;
+            debits_pending: bigint;
+            debits_posted: bigint;
+            credits_pending: bigint;
+            credits_posted: bigint;
+            user_data_128: bigint;
+            user_data_64: bigint;
+            user_data_32: number;
+            reserved: number;
+            ledger: number;
+            code: number;
+            flags: number;
+            timestamp: bigint;
+          }
+
+          /** TigerBeetle Transfer */
+          interface Transfer {
+            id: bigint;
+            debit_account_id: bigint;
+            credit_account_id: bigint;
+            amount: bigint;
+            pending_id: bigint;
+            user_data_128: bigint;
+            user_data_64: bigint;
+            user_data_32: number;
+            timeout: number;
+            ledger: number;
+            code: number;
+            flags: number;
+            timestamp: bigint;
+          }
+
+          /** Account flags for controlling account behavior */
+          declare const AccountFlags: {
+            readonly none: 0;
+            /** Link this account creation with the next in the batch */
+            readonly linked: 1;
+            /** Debits posted + pending must not exceed credits posted */
+            readonly debits_must_not_exceed_credits: 2;
+            /** Credits posted + pending must not exceed debits posted */
+            readonly credits_must_not_exceed_debits: 4;
+            /** Enable historical balance queries */
+            readonly history: 8;
+            /** Account is imported (for data migration) */
+            readonly imported: 16;
+            /** Account is closed */
+            readonly closed: 32;
+          };
+
+          /** Transfer flags for controlling transfer behavior */
+          declare const TransferFlags: {
+            readonly none: 0;
+            /** Link this transfer with the next in the batch */
+            readonly linked: 1;
+            /** Create a pending (two-phase) transfer */
+            readonly pending: 2;
+            /** Post a pending transfer */
+            readonly post_pending_transfer: 4;
+            /** Void a pending transfer */
+            readonly void_pending_transfer: 8;
+            /** Cap debit at available balance */
+            readonly balancing_debit: 16;
+            /** Cap credit at available balance */
+            readonly balancing_credit: 32;
+            /** Close the debit account */
+            readonly closing_debit: 64;
+            /** Close the credit account */
+            readonly closing_credit: 128;
+            /** Transfer is imported (for data migration) */
+            readonly imported: 256;
+          };
+
+          /** Account filter flags */
+          declare const AccountFilterFlags: {
+            readonly none: 0;
+            readonly debits: 1;
+            readonly credits: 2;
+            readonly reversed: 4;
+          };
+
+          /** Query filter flags */
+          declare const QueryFilterFlags: {
+            readonly none: 0;
+            readonly reversed: 1;
+          };
+
+          /** Error from account creation */
+          interface CreateAccountsError {
+            index: number;
+            result: string;
+          }
+
+          /** Error from transfer creation */
+          interface CreateTransfersError {
+            index: number;
+            result: string;
+          }
+
+          /** Filter for querying account transfers/balances */
+          interface AccountFilter {
+            account_id: bigint;
+            user_data_128: bigint;
+            user_data_64: bigint;
+            user_data_32: number;
+            code: number;
+            timestamp_min: bigint;
+            timestamp_max: bigint;
+            limit: number;
+            flags: number;
+          }
+
+          /** Filter for querying accounts/transfers */
+          interface QueryFilter {
+            user_data_128: bigint;
+            user_data_64: bigint;
+            user_data_32: number;
+            ledger: number;
+            code: number;
+            timestamp_min: bigint;
+            timestamp_max: bigint;
+            limit: number;
+            flags: number;
+          }
+
+          /** Historical account balance */
+          interface AccountBalance {
+            debits_pending: bigint;
+            debits_posted: bigint;
+            credits_pending: bigint;
+            credits_posted: bigint;
+            timestamp: bigint;
+          }
+
+          // ═══════════════════════════════════════════════════════════════════════════
+          // Playground API
+          // ═══════════════════════════════════════════════════════════════════════════
+
+          /** Account type for T-account display */
+          type AccountType = "Asset" | "Liability" | "Equity" | "Revenue" | "Expense";
+
+          /**
+           * Define a TigerBeetle account.
+           * @param params.id - Optional unique account ID (bigint). Auto-generated if not provided.
+           * @param params.name - Account name for display and reference in transfers.
+           * @param params.ledger - Ledger number the account belongs to.
+           * @param params.code - Optional account code (default: 1).
+           * @param params.type - Account type: Asset, Liability, Equity, Revenue, or Expense.
+           * @param params.flags - Optional flags as a number or pipe-separated string.
+           */
+          declare function account(params: {
+            id?: bigint;
+            name?: string;
+            ledger: number;
+            code?: number;
+            type: AccountType;
+            flags?: number | string;
+          }): Account;
+
+          /**
+           * Define a TigerBeetle transfer.
+           * @param id - Unique transfer ID (bigint)
+           * @param ledger - Ledger number
+           * @param amount - Amount (bigint)
+           * @param dr - Debit account name
+           * @param cr - Credit account name
+           * @param flags - Optional flags as number or pipe-separated string
+           * @param more - Optional: pending_id, code, failsWith
+           */
+          declare function transfer(
+            id: bigint,
+            ledger: number,
+            amount: bigint,
+            dr: string,
+            cr: string,
+            flags?: number | string,
+            more?: { pending_id?: bigint; code?: number; failsWith?: string },
+          ): Transfer;
+
+          /** Create accounts in TigerBeetle. Returns array of errors (empty if all succeeded). */
+          declare function createAccounts(accounts: Account[]): Promise<CreateAccountsError[]>;
+
+          /**
+           * Create transfers in TigerBeetle. Updates T-Accounts after each call.
+           * Returns array of errors (empty if all succeeded).
+           */
+          declare function createTransfers(transfers: Transfer[]): Promise<CreateTransfersError[]>;
+
+          /**
+           * Reset the account name registry and create a new T-accounts tab.
+           * @param startId - Starting ID for auto-generated account IDs
+           * @param caseName - Name to display on the tab (defaults to "run N")
+           */
+          declare function resetAccountRegistry(startId?: bigint, caseName?: string): void;
+
+          /** Set a display name for a ledger ID. */
+          declare function setLedgerName(ledgerId: number, name: string): void;
+
+          /**
+           * Define a ledger with a name and ID.
+           * @returns The ledger ID for use in accounts and transfers.
+           */
+          declare function defineLedger(name: string, id: number): number;
+
+          /** Get an account ID by name. Throws if not found. */
+          declare function getAccountId(name: string): bigint;
+
+          /**
+           * CaseContext manages a test case with structured batch logging.
+           * Automatically adds linked flags to create valid TigerBeetle linked chains.
+           */
+          declare class CaseContext {
+            constructor();
+            /** Create accounts and log the result. */
+            createAccounts(accounts: Account[]): Promise<void>;
+            /**
+             * Execute a batch of transfers with structured logging.
+             * Automatically adds linked flags to all but the last transfer.
+             * @param batchNum - Batch number for logging
+             * @param description - Description line(s) to log
+             * @param transfers - Array of transfers to execute
+             */
+            batch(batchNum: number, description: string | string[], transfers: Transfer[]): Promise<void>;
+          }
+
+          /**
+           * TigerBeetle WASM client for querying state.
+           */
+          declare const tb: {
+            /** Get all accounts with their current balances (in creation order). */
+            getAllAccounts(): Account[];
+            /** Lookup accounts by ID. Returns found accounts (missing IDs are omitted). */
+            lookupAccounts(ids: bigint[]): Account[];
+            /** Lookup transfers by ID. Returns found transfers (missing IDs are omitted). */
+            lookupTransfers(ids: bigint[]): Transfer[];
+            /** Get transfers for a specific account. */
+            getAccountTransfers(filter: AccountFilter): Transfer[];
+            /** Get historical balances for a specific account (requires history flag). */
+            getAccountBalances(filter: AccountFilter): AccountBalance[];
+            /** Query accounts by filter criteria. */
+            queryAccounts(filter: QueryFilter): Account[];
+            /** Query transfers by filter criteria. */
+            queryTransfers(filter: QueryFilter): Transfer[];
+            /** Reset the state machine (called automatically on each run). */
+            reset(): void;
+            /** Create accounts. Returns errors (empty if all succeeded). */
+            createAccounts(accounts: Account[]): CreateAccountsError[];
+            /** Create transfers. Returns errors (empty if all succeeded). */
+            createTransfers(transfers: Transfer[]): CreateTransfersError[];
+          };
+
+          /** Logging utilities */
+          declare const log: {
+            text(msg: string): void;
+            bold(msg: string): void;
+            dim(msg: string): void;
+            success(msg: string): void;
+            error(msg: string): void;
+            warn(msg: string): void;
+            section(title: string, desc?: string): void;
+            batch(num: number, ...lines: string[]): void;
+          };
+        `, 'ts:playground-api.d.ts');
+
+        monaco.languages.typescript.javascriptDefaults.setCompilerOptions({
+          target: monaco.languages.typescript.ScriptTarget.ESNext,
+          allowNonTsExtensions: true,
+        });
+
+        // Create editor
+        const editor = monaco.editor.create(document.getElementById('editor-container'), {
+          language: 'javascript',
+          theme: getTheme(),
+          fontSize: 13,
+          fontFamily: "'JetBrains Mono', 'Fira Code', 'SF Mono', Consolas, monospace",
+          fontLigatures: true,
+          lineHeight: 22,
+          minimap: { enabled: false },
+          scrollBeyondLastLine: false,
+          padding: { top: 16, bottom: 16 },
+          automaticLayout: true,
+          renderLineHighlight: 'line',
+          overviewRulerLanes: 0,
+          hideCursorInOverviewRuler: true,
+          glyphMargin: false,
+          lineDecorationsWidth: 8,
+          lineNumbersMinChars: 3,
+          folding: true,
+          foldingHighlight: true,
+          showFoldingControls: 'always',
+          suggest: { showWords: false },
+          quickSuggestions: { strings: false },
+        });
+
+        // Listen for color scheme changes
+        prefersDark.addEventListener('change', () => {
+          monaco.editor.setTheme(getTheme());
+        });
+
+        resolve(editor);
+      });
+    });
+  </script>
+
+  
+</body>
+</html>
