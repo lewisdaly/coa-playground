@@ -1,0 +1,494 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="icon" type="image/x-icon" href="./favicon-9kshrwp8.ico">
+  <title>Playground</title>
+  
+<link rel="stylesheet" crossorigin href="./index-vjg619wk.css"><script type="module" crossorigin src="./index-mtp1n7bg.js"></script></head>
+<body>
+  <div id="app">
+
+    <div id="editor-pane">
+      <div class="pane-header">
+        <div id="mode-toggle" class="mode-toggle" style="display: none;">
+          <button id="mode-code" class="mode-btn active">Code</button>
+          <button id="mode-simple" class="mode-btn">Simple</button>
+        </div>
+        <div id="source-dropdown" class="source-dropdown">
+          <button class="source-dropdown-trigger" id="source-dropdown-trigger">
+            <span class="label" id="source-dropdown-label">Cash Authorization</span>
+            <span class="arrow">▼</span>
+          </button>
+          <div class="source-dropdown-menu" id="source-dropdown-menu">
+            <!-- Populated by JavaScript -->
+          </div>
+        </div>
+        <button id="save-btn" title="Save (⌘S)" style="display: none;">Save</button>
+        <div id="run-dropdown" class="run-dropdown">
+          <button id="run-btn">▶ Run</button>
+          <button id="run-dropdown-trigger" class="run-dropdown-trigger">▼</button>
+          <div id="run-dropdown-menu" class="run-dropdown-menu">
+            <div class="run-dropdown-item" data-action="run">▶ Run</div>
+            <div id="step-mode-menu-item" class="run-dropdown-item" data-action="step" style="display: none;">⏯ Step Mode</div>
+          </div>
+        </div>
+        <div id="step-controls" class="step-controls hidden">
+          <span class="step-status">Step <span id="step-current">1</span> of <span id="step-total">5</span></span>
+          <button id="step-next-btn" class="step-btn">Next →</button>
+          <button id="step-run-all-btn" class="step-btn secondary">Run All</button>
+          <button id="step-exit-btn" class="step-btn danger">Exit</button>
+        </div>
+        <button id="clear-btn">Clear</button>
+        <span id="status" class="status"></span>
+        <span class="hint">⌘↵ run · ⌘O folder · ⌘S save</span>
+      </div>
+
+      <div id="editor-container"></div>
+      <div id="simple-ui-container" style="display: none;"></div>
+      <div id="log-divider"></div>
+      <div id="log-pane">
+        <div class="pane-header">
+          <span class="pane-title">Console</span>
+          <span class="hint">⌘J hide · ⌘⇧J maximize</span>
+        </div>
+        <div id="log"></div>
+      </div>
+    </div>
+
+    <div id="divider"></div>
+    <div id="t-accounts-pane">
+      <div class="pane-header">
+        <span class="pane-title">T-Accounts</span>
+        <button id="share-btn" title="Copy shareable link">Share</button>
+        <button id="settings-btn" title="Settings">⚙</button>
+      </div>
+      <div id="t-accounts-tabs"></div>
+      <div id="t-accounts-content"></div>
+    </div>
+
+  </div>
+
+  <!-- Settings Dialog -->
+  <div id="settings-overlay" class="settings-overlay hidden">
+    <div class="settings-dialog">
+      <div class="settings-header">
+        <h2>Settings</h2>
+        <button id="settings-close-btn" class="settings-close-btn">×</button>
+      </div>
+      <div class="settings-body">
+        <div class="settings-section">
+          <div class="settings-row">
+            <div>
+              <div class="settings-label">Theme</div>
+              <div class="settings-label-desc">Choose color scheme</div>
+            </div>
+            <select id="settings-theme" class="settings-select">
+              <option value="system">System</option>
+              <option value="light">Light</option>
+              <option value="dark">Dark</option>
+            </select>
+          </div>
+          <div class="settings-row">
+            <div>
+              <div class="settings-label">Clear Local Data</div>
+              <div class="settings-label-desc">Reset all settings and saved files</div>
+            </div>
+            <button id="settings-clear-data" class="settings-btn-danger">Clear</button>
+          </div>
+        </div>
+        <div class="settings-section">
+          <div class="settings-section-title experimental">Experimental</div>
+          <div class="settings-row">
+            <div>
+              <div class="settings-label">Step Mode</div>
+              <div class="settings-label-desc">Step through transfers one at a time</div>
+            </div>
+            <div id="settings-step-mode" class="settings-toggle"></div>
+          </div>
+          <div class="settings-row">
+            <div>
+              <div class="settings-label">Simple Mode</div>
+              <div class="settings-label-desc">Visual editor for accounts and transfers</div>
+            </div>
+            <div id="settings-simple-mode" class="settings-toggle"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Account JSON Popover -->
+  <div id="account-json-popover" class="account-json-popover">
+    <pre id="account-json-content"></pre>
+  </div>
+
+  <!-- Monaco Editor (AMD loader from CDN) -->
+  <script src="https://cdn.jsdelivr.net/npm/monaco-editor@0.52.2/min/vs/loader.js"></script>
+  <script>
+    require.config({ paths: { vs: 'https://cdn.jsdelivr.net/npm/monaco-editor@0.52.2/min/vs' } });
+
+    window.__monacoReady = new Promise((resolve) => {
+      require(['vs/editor/editor.main'], () => {
+
+        // Custom dark theme - VS Code Dark+ inspired
+        monaco.editor.defineTheme('coa-dark', {
+          base: 'vs-dark',
+          inherit: true,
+          rules: [],
+          colors: {
+            'editor.background':                '#1e1e1e',
+            'editor.lineHighlightBackground':   '#2a2a2a',
+            'editorLineNumber.foreground':      '#5a5a5a',
+            'editorLineNumber.activeForeground':'#c6c6c6',
+            'editorCursor.foreground':          '#aeafad',
+            'editor.selectionBackground':       '#264f78',
+            'editor.inactiveSelectionBackground':'#3a3d41',
+            'scrollbarSlider.background':       '#4e4e4e80',
+            'scrollbarSlider.hoverBackground':  '#646464aa',
+            'editorWidget.background':          '#252526',
+            'editorSuggestWidget.background':   '#252526',
+            'editorSuggestWidget.border':       '#454545',
+          },
+        });
+
+        // Custom light theme
+        monaco.editor.defineTheme('coa-light', {
+          base: 'vs',
+          inherit: true,
+          rules: [],
+          colors: {
+            'editor.background':                '#ffffff',
+            'editor.lineHighlightBackground':   '#f5f5f5',
+            'editorLineNumber.foreground':      '#c0c0c0',
+            'editorLineNumber.activeForeground':'#888888',
+            'editorCursor.foreground':          '#d4a000',
+            'editor.selectionBackground':       '#fef3c744',
+            'editor.inactiveSelectionBackground':'#fef3c722',
+            'scrollbarSlider.background':       '#c0c0c088',
+            'scrollbarSlider.hoverBackground':  '#a0a0a0aa',
+            'editorWidget.background':          '#f8f8f8',
+            'editorSuggestWidget.background':   '#f8f8f8',
+            'editorSuggestWidget.border':       '#d0d0d0',
+          },
+        });
+
+        // Detect color scheme preference
+        const prefersDark = window.matchMedia('(prefers-color-scheme: dark)');
+        const getTheme = () => prefersDark.matches ? 'coa-dark' : 'coa-light';
+
+        // Type declarations for the playground API — enables IntelliSense
+        monaco.languages.typescript.javascriptDefaults.addExtraLib(`
+          // ═══════════════════════════════════════════════════════════════════════════
+          // TigerBeetle Core Types (from tigerbeetle-node)
+          // ═══════════════════════════════════════════════════════════════════════════
+
+          /** TigerBeetle Account */
+          interface Account {
+            id: bigint;
+            debits_pending: bigint;
+            debits_posted: bigint;
+            credits_pending: bigint;
+            credits_posted: bigint;
+            user_data_128: bigint;
+            user_data_64: bigint;
+            user_data_32: number;
+            reserved: number;
+            ledger: number;
+            code: number;
+            flags: number;
+            timestamp: bigint;
+          }
+
+          /** TigerBeetle Transfer */
+          interface Transfer {
+            id: bigint;
+            debit_account_id: bigint;
+            credit_account_id: bigint;
+            amount: bigint;
+            pending_id: bigint;
+            user_data_128: bigint;
+            user_data_64: bigint;
+            user_data_32: number;
+            timeout: number;
+            ledger: number;
+            code: number;
+            flags: number;
+            timestamp: bigint;
+          }
+
+          /** Account flags for controlling account behavior */
+          declare const AccountFlags: {
+            readonly none: 0;
+            /** Link this account creation with the next in the batch */
+            readonly linked: 1;
+            /** Debits posted + pending must not exceed credits posted */
+            readonly debits_must_not_exceed_credits: 2;
+            /** Credits posted + pending must not exceed debits posted */
+            readonly credits_must_not_exceed_debits: 4;
+            /** Enable historical balance queries */
+            readonly history: 8;
+            /** Account is imported (for data migration) */
+            readonly imported: 16;
+            /** Account is closed */
+            readonly closed: 32;
+          };
+
+          /** Transfer flags for controlling transfer behavior */
+          declare const TransferFlags: {
+            readonly none: 0;
+            /** Link this transfer with the next in the batch */
+            readonly linked: 1;
+            /** Create a pending (two-phase) transfer */
+            readonly pending: 2;
+            /** Post a pending transfer */
+            readonly post_pending_transfer: 4;
+            /** Void a pending transfer */
+            readonly void_pending_transfer: 8;
+            /** Cap debit at available balance */
+            readonly balancing_debit: 16;
+            /** Cap credit at available balance */
+            readonly balancing_credit: 32;
+            /** Close the debit account */
+            readonly closing_debit: 64;
+            /** Close the credit account */
+            readonly closing_credit: 128;
+            /** Transfer is imported (for data migration) */
+            readonly imported: 256;
+          };
+
+          /** Account filter flags */
+          declare const AccountFilterFlags: {
+            readonly none: 0;
+            readonly debits: 1;
+            readonly credits: 2;
+            readonly reversed: 4;
+          };
+
+          /** Query filter flags */
+          declare const QueryFilterFlags: {
+            readonly none: 0;
+            readonly reversed: 1;
+          };
+
+          /** Error from account creation */
+          interface CreateAccountsError {
+            index: number;
+            result: string;
+          }
+
+          /** Error from transfer creation */
+          interface CreateTransfersError {
+            index: number;
+            result: string;
+          }
+
+          /** Filter for querying account transfers/balances */
+          interface AccountFilter {
+            account_id: bigint;
+            user_data_128: bigint;
+            user_data_64: bigint;
+            user_data_32: number;
+            code: number;
+            timestamp_min: bigint;
+            timestamp_max: bigint;
+            limit: number;
+            flags: number;
+          }
+
+          /** Filter for querying accounts/transfers */
+          interface QueryFilter {
+            user_data_128: bigint;
+            user_data_64: bigint;
+            user_data_32: number;
+            ledger: number;
+            code: number;
+            timestamp_min: bigint;
+            timestamp_max: bigint;
+            limit: number;
+            flags: number;
+          }
+
+          /** Historical account balance */
+          interface AccountBalance {
+            debits_pending: bigint;
+            debits_posted: bigint;
+            credits_pending: bigint;
+            credits_posted: bigint;
+            timestamp: bigint;
+          }
+
+          // ═══════════════════════════════════════════════════════════════════════════
+          // Playground API
+          // ═══════════════════════════════════════════════════════════════════════════
+
+          /** Account type for T-account display */
+          type AccountType = "Asset" | "Liability" | "Equity" | "Revenue" | "Expense";
+
+          /**
+           * Define a TigerBeetle account.
+           * @param params.id - Optional unique account ID (bigint). Auto-generated if not provided.
+           * @param params.name - Account name for display and reference in transfers.
+           * @param params.ledger - Ledger number the account belongs to.
+           * @param params.code - Optional account code (default: 1).
+           * @param params.type - Account type: Asset, Liability, Equity, Revenue, or Expense.
+           * @param params.flags - Optional flags as a number or pipe-separated string.
+           */
+          declare function account(params: {
+            id?: bigint;
+            name?: string;
+            ledger: number;
+            code?: number;
+            type: AccountType;
+            flags?: number | string;
+          }): Account;
+
+          /**
+           * Define a TigerBeetle transfer.
+           * @param id - Unique transfer ID (bigint)
+           * @param ledger - Ledger number
+           * @param amount - Amount (bigint)
+           * @param dr - Debit account name
+           * @param cr - Credit account name
+           * @param flags - Optional flags as number or pipe-separated string
+           * @param more - Optional: pending_id, code, failsWith
+           */
+          declare function transfer(
+            id: bigint,
+            ledger: number,
+            amount: bigint,
+            dr: string,
+            cr: string,
+            flags?: number | string,
+            more?: { pending_id?: bigint; code?: number; failsWith?: string },
+          ): Transfer;
+
+          /** Create accounts in TigerBeetle. Returns array of errors (empty if all succeeded). */
+          declare function createAccounts(accounts: Account[]): Promise<CreateAccountsError[]>;
+
+          /**
+           * Create transfers in TigerBeetle. Updates T-Accounts after each call.
+           * Returns array of errors (empty if all succeeded).
+           */
+          declare function createTransfers(transfers: Transfer[]): Promise<CreateTransfersError[]>;
+
+          /**
+           * Reset the account name registry and create a new T-accounts tab.
+           * @param startId - Starting ID for auto-generated account IDs
+           * @param caseName - Name to display on the tab (defaults to "run N")
+           */
+          declare function resetAccountRegistry(startId?: bigint, caseName?: string): void;
+
+          /** Set a display name for a ledger ID. */
+          declare function setLedgerName(ledgerId: number, name: string): void;
+
+          /**
+           * Define a ledger with a name and ID.
+           * @returns The ledger ID for use in accounts and transfers.
+           */
+          declare function defineLedger(name: string, id: number): number;
+
+          /** Get an account ID by name. Throws if not found. */
+          declare function getAccountId(name: string): bigint;
+
+          /**
+           * CaseContext manages a test case with structured batch logging.
+           * Automatically adds linked flags to create valid TigerBeetle linked chains.
+           */
+          declare class CaseContext {
+            constructor();
+            /** Create accounts and log the result. */
+            createAccounts(accounts: Account[]): Promise<void>;
+            /**
+             * Execute a batch of transfers with structured logging.
+             * Automatically adds linked flags to all but the last transfer.
+             * @param batchNum - Batch number for logging
+             * @param description - Description line(s) to log
+             * @param transfers - Array of transfers to execute
+             */
+            batch(batchNum: number, description: string | string[], transfers: Transfer[]): Promise<void>;
+          }
+
+          /**
+           * TigerBeetle WASM client for querying state.
+           */
+          declare const tb: {
+            /** Get all accounts with their current balances (in creation order). */
+            getAllAccounts(): Account[];
+            /** Lookup accounts by ID. Returns found accounts (missing IDs are omitted). */
+            lookupAccounts(ids: bigint[]): Account[];
+            /** Lookup transfers by ID. Returns found transfers (missing IDs are omitted). */
+            lookupTransfers(ids: bigint[]): Transfer[];
+            /** Get transfers for a specific account. */
+            getAccountTransfers(filter: AccountFilter): Transfer[];
+            /** Get historical balances for a specific account (requires history flag). */
+            getAccountBalances(filter: AccountFilter): AccountBalance[];
+            /** Query accounts by filter criteria. */
+            queryAccounts(filter: QueryFilter): Account[];
+            /** Query transfers by filter criteria. */
+            queryTransfers(filter: QueryFilter): Transfer[];
+            /** Reset the state machine (called automatically on each run). */
+            reset(): void;
+            /** Create accounts. Returns errors (empty if all succeeded). */
+            createAccounts(accounts: Account[]): CreateAccountsError[];
+            /** Create transfers. Returns errors (empty if all succeeded). */
+            createTransfers(transfers: Transfer[]): CreateTransfersError[];
+          };
+
+          /** Logging utilities */
+          declare const log: {
+            text(msg: string): void;
+            bold(msg: string): void;
+            dim(msg: string): void;
+            success(msg: string): void;
+            error(msg: string): void;
+            warn(msg: string): void;
+            section(title: string, desc?: string): void;
+            batch(num: number, ...lines: string[]): void;
+          };
+        `, 'ts:playground-api.d.ts');
+
+        monaco.languages.typescript.javascriptDefaults.setCompilerOptions({
+          target: monaco.languages.typescript.ScriptTarget.ESNext,
+          allowNonTsExtensions: true,
+        });
+
+        // Create editor
+        const editor = monaco.editor.create(document.getElementById('editor-container'), {
+          language: 'javascript',
+          theme: getTheme(),
+          fontSize: 13,
+          fontFamily: "'JetBrains Mono', 'Fira Code', 'SF Mono', Consolas, monospace",
+          fontLigatures: true,
+          lineHeight: 22,
+          minimap: { enabled: false },
+          scrollBeyondLastLine: false,
+          padding: { top: 16, bottom: 16 },
+          automaticLayout: true,
+          renderLineHighlight: 'line',
+          overviewRulerLanes: 0,
+          hideCursorInOverviewRuler: true,
+          glyphMargin: false,
+          lineDecorationsWidth: 8,
+          lineNumbersMinChars: 3,
+          folding: true,
+          foldingHighlight: true,
+          showFoldingControls: 'always',
+          suggest: { showWords: false },
+          quickSuggestions: { strings: false },
+        });
+
+        // Listen for color scheme changes
+        prefersDark.addEventListener('change', () => {
+          monaco.editor.setTheme(getTheme());
+        });
+
+        resolve(editor);
+      });
+    });
+  </script>
+
+  
+</body>
+</html>
